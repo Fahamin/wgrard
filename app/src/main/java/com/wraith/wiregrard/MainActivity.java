@@ -4,6 +4,7 @@ import static com.wireguard.android.backend.Tunnel.State.DOWN;
 import static com.wireguard.android.backend.Tunnel.State.UP;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.app.PendingIntent;
@@ -48,12 +49,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Intent intent = VpnService.prepare(this);
-        Log.v("CHECKSTATE", "start");
-        if (intent != null) {
-            startActivityForResult(intent, 1);
-        }
-        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("connectionState"));
+
+        Intent serviceIntent = new Intent(this, MyForegroundService.class);
+        ContextCompat.startForegroundService(this, serviceIntent);
+
+       // LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("connectionState"));
     }
 
     public void startMyvpn(View view) {
@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
         tunnel = new WgTunnel();
         Intent intentPrepare = GoBackend.VpnService.prepare(this);
         if (intentPrepare != null) {
-            startActivityForResult(intentPrepare, 0);
+            setResult( 0,intentPrepare);
         }
         interfaceBuilder = new Interface.Builder();
         peerBuilder = new Peer.Builder();
@@ -98,7 +98,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
 
         if (resultCode == RESULT_OK) {
             Intent intent = new Intent(this, MainActivity.class);
