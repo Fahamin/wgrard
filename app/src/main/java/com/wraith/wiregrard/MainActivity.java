@@ -7,6 +7,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import android.app.ActivityManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -44,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     Backend backend;
     Tunnel tunnel;
     Config.Builder config;
+    MyBroadcastReceiver broadcastReceiver = new MyBroadcastReceiver();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,57 +53,43 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         Intent serviceIntent = new Intent(this, MyForegroundService.class);
-        ContextCompat.startForegroundService(this, serviceIntent);
+        serviceIntent.putExtra("intentNetwork", "192.168.6.162/32");
+        serviceIntent.putExtra("countryName", "Usa Alabama");
 
-       // LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("connectionState"));
+        serviceIntent.putExtra("privateKey", "oHJjrb1E59KtULqEBHVPefEi5YCYKga5FApXUOpe2G8=");
+        serviceIntent.putExtra("endPoint", "usa1.vpnjantit.com:1024");
+        serviceIntent.putExtra("publicKey", "ycqlMDMLhJNKjT+cVThGo1COfwIplHQhBS6ptH2BmQw=");
+        ContextCompat.startForegroundService(this, serviceIntent);
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter("connectionState"));
+    }
+
+    public boolean foregroundServiceRunning() {
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : activityManager.getRunningServices(Integer.MAX_VALUE)) {
+            if (MyForegroundService.class.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void startMyvpn(View view) {
-        config = new Config.Builder();
-        tunnel = new WgTunnel();
-        Intent intentPrepare = GoBackend.VpnService.prepare(this);
-        if (intentPrepare != null) {
-            setResult( 0,intentPrepare);
-        }
-        interfaceBuilder = new Interface.Builder();
-        peerBuilder = new Peer.Builder();
-        backend = new GoBackend(this);
+        Intent serviceIntent = new Intent(this, MyForegroundService.class);
+        serviceIntent.putExtra("intentNetwork", "192.168.6.162/32");
+        serviceIntent.putExtra("countryName", "Usa Alabama");
 
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    backend.setState(tunnel, UP, config
-                            .setInterface(interfaceBuilder.addAddress(InetNetwork.parse("192.168.6.162/32")).parsePrivateKey("oHJjrb1E59KtULqEBHVPefEi5YCYKga5FApXUOpe2G8=").build())
-                            .addPeer(peerBuilder.addAllowedIp(InetNetwork.parse("0.0.0.0/0")).setEndpoint(InetEndpoint.parse("usa1.vpnjantit.com:1024")).parsePublicKey("ycqlMDMLhJNKjT+cVThGo1COfwIplHQhBS6ptH2BmQw=").build())
-                            .build());
+        serviceIntent.putExtra("privateKey", "oHJjrb1E59KtULqEBHVPefEi5YCYKga5FApXUOpe2G8=");
+        serviceIntent.putExtra("endPoint", "usa1.vpnjantit.com:1024");
+        serviceIntent.putExtra("publicKey", "ycqlMDMLhJNKjT+cVThGo1COfwIplHQhBS6ptH2BmQw=");
+        ContextCompat.startForegroundService(this, serviceIntent);
 
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
     }
 
     public void offf(View view) {
 
-        try {
-            backend.setState(tunnel, DOWN, config.build());
-
-            showToast("Disconnect");
-        } catch (Exception e) {
-            e.printStackTrace();
-            showToast("" + e);
-        }
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (resultCode == RESULT_OK) {
-            Intent intent = new Intent(this, MainActivity.class);
-            startService(intent);
+        if (foregroundServiceRunning()) {
+            stopService(new Intent(this, MyVpnService.class));
+            stopService(new Intent(this, MyForegroundService.class));
         }
     }
 
@@ -110,34 +98,5 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
-
-    BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                // updateUI(intent.getStringExtra("state"));
-                // setStatus(intent.getStringExtra("state"));
-                showToast("m");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            try {
-                String duration = intent.getStringExtra("duration");
-                String lastPacketReceive = intent.getStringExtra("lastPacketReceive");
-                String byteIn = intent.getStringExtra("byteIn");
-                String byteOut = intent.getStringExtra("byteOut");
-                if (duration == null) duration = "00:00:00";
-                if (lastPacketReceive == null) lastPacketReceive = "0";
-                if (byteIn == null) byteIn = " ";
-                if (byteOut == null) byteOut = " ";
-                showToast(duration);
-                //  updateConnectionStatus(duration, lastPacketReceive, byteIn, byteOut);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-        }
-    };
 
 }

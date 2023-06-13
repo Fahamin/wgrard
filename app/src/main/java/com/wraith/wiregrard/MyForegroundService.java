@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
@@ -22,7 +23,7 @@ public class MyForegroundService extends Service {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_MUTABLE);
 
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("VPN Service")
+                .setContentTitle(intent.getStringExtra("countryName"))
                 .setContentText("Running...")
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentIntent(pendingIntent)
@@ -32,7 +33,12 @@ public class MyForegroundService extends Service {
 
         // Start the VPN service
         Intent vpnIntent = new Intent(this, MyVpnService.class);
+        vpnIntent.putExtra("intentNetwork", intent.getStringExtra("intentNetwork"));
+        vpnIntent.putExtra("privateKey", intent.getStringExtra("privateKey"));
+        vpnIntent.putExtra("endPoint", intent.getStringExtra("endPoint"));
+        vpnIntent.putExtra("publicKey", intent.getStringExtra("publicKey"));
         startService(vpnIntent);
+
 
         // Return START_STICKY to keep the service running
         return START_STICKY;
@@ -47,6 +53,13 @@ public class MyForegroundService extends Service {
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(channel);
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        stopService(new Intent(this, MyVpnService.class));
+
+        super.onDestroy();
     }
 
     @Override
