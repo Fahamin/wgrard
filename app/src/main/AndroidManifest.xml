@@ -46,6 +46,7 @@
                 android:value="" />
         </activity>
 
+
         <service
             android:name=".Service.MyForegroundService"
             android:exported="false" />
@@ -67,6 +68,8 @@
                 <action android:name="android.net.VpnService" />
             </intent-filter>
         </service>
+
+
         <service
             android:name="com.wireguard.android.backend.GoBackend$VpnService"
             android:exported="true"
