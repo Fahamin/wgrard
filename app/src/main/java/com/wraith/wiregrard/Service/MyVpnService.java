@@ -1,4 +1,4 @@
-package com.wraith.wiregrard;
+package com.wraith.wiregrard.Service;
 
 import static com.wireguard.android.backend.Tunnel.State.DOWN;
 import static com.wireguard.android.backend.Tunnel.State.UP;
@@ -17,6 +17,7 @@ import com.wireguard.config.InetEndpoint;
 import com.wireguard.config.InetNetwork;
 import com.wireguard.config.Interface;
 import com.wireguard.config.Peer;
+import com.wraith.wiregrard.WirgurdUtils.WgTunnel;
 
 public class MyVpnService extends VpnService {
     private Thread vpnThread;
@@ -25,12 +26,17 @@ public class MyVpnService extends VpnService {
     private PendingIntent a;
     private static int currentTunnelHandle = -1;
     private Process process;
-
     Interface.Builder interfaceBuilder;
     Peer.Builder peerBuilder;
     Backend backend;
     Tunnel tunnel;
     Config.Builder config;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -80,11 +86,11 @@ public class MyVpnService extends VpnService {
         if (vpnThread != null)
             vpnThread.interrupt();
         try {
+            stopSelf();
             backend.setState(tunnel, DOWN, config.build());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        stopSelf();
         super.onDestroy();
     }
 }
