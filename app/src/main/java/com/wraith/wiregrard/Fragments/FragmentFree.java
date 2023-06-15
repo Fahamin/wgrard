@@ -1,66 +1,71 @@
 package com.wraith.wiregrard.Fragments;
 
+import static com.wraith.wiregrard.utils.Fun.checkInternet;
+import static com.wraith.wiregrard.utils.Fun.foregroundServiceRunning;
+
+import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
+import com.wireguard.android.backend.GoBackend;
+import com.wraith.wiregrard.Adapter.FreeServerAdapter;
+import com.wraith.wiregrard.MainActivity;
+import com.wraith.wiregrard.Model.VpnModel;
 import com.wraith.wiregrard.R;
+import com.wraith.wiregrard.Service.MyForegroundService;
+import com.wraith.wiregrard.utils.Fun;
+import com.wraith.wiregrard.utils.TinyDB;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link FragmentFree#newInstance} factory method to
- * create an instance of this fragment.
- */
-public class FragmentFree extends Fragment {
+import java.util.ArrayList;
+import java.util.List;
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+public class FragmentFree extends Fragment implements FreeServerAdapter.OnSelectListener {
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    RecyclerView recyclerView;
+    List<VpnModel> list = new ArrayList<>();
 
-    public FragmentFree() {
-        // Required empty public constructor
-    }
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment FragmentFree.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static FragmentFree newInstance(String param1, String param2) {
-        FragmentFree fragment = new FragmentFree();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
-        }
-    }
+    TinyDB tinyDB; // = new TinyDB(getActivity());
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_free, container, false);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        new Fun(getActivity());
+        tinyDB = new TinyDB(getActivity());
+        list = Fun.FreeServerList;
+        recyclerView = view.findViewById(R.id.rv_Free);
+        FreeServerAdapter adapter = new FreeServerAdapter(list, getActivity(),this);
+        recyclerView.setNestedScrollingEnabled(false);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        recyclerView.setAdapter(adapter);
+
+    }
+
+    @Override
+    public void onSelected(int server) {
+        tinyDB.putInt("serverPos", server);
+        Log.e("onstar", "" + server);
+
+        Intent mIntent = new Intent();
+        mIntent.putExtra("server", server);
+        getActivity().setResult(getActivity().RESULT_OK, mIntent);
+        getActivity().finish();
     }
 }

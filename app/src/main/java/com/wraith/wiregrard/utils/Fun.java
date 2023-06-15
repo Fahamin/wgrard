@@ -5,6 +5,7 @@ import static android.content.Context.CLIPBOARD_SERVICE;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
@@ -29,16 +30,47 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 
+import com.wraith.wiregrard.Model.VpnModel;
+import com.wraith.wiregrard.Service.MyForegroundService;
+
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class Fun {
 
     public static Context context;
+    public static   List<VpnModel> FreeServerList;
 
     public Fun(Context context) {
         this.context = context;
+        FreeServerList = new ArrayList<>();
+        getServerList();
+    }
 
+    private void getServerList() {
+
+        FreeServerList.add(new VpnModel("192.168.6.189/32", "cApuxMnQiHHDiZLDLiIPx9/0RSo7wN/uCpd70cO4eX8=",
+                "ca2.vpnjantit.com:1024", "LZg89RAqejsZi6rhPIiSalWqDojKt08km4WIIlYh0zI=", "Canada"));
+
+        FreeServerList.add(new VpnModel("192.168.6.189/32", "cApuxMnQiHHDiZLDLiIPx9/0RSo7wN/uCpd70cO4eX8=",
+                "ca2.vpnjantit.com:1024", "LZg89RAqejsZi6rhPIiSalWqDojKt08km4WIIlYh0zI=", "UK"));
+
+        FreeServerList.add(new VpnModel("192.168.6.189/32", "cApuxMnQiHHDiZLDLiIPx9/0RSo7wN/uCpd70cO4eX8=",
+                "ca2.vpnjantit.com:1024", "LZg89RAqejsZi6rhPIiSalWqDojKt08km4WIIlYh0zI=", "Usa"));
+
+    }
+
+
+    public static boolean foregroundServiceRunning() {
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : activityManager.getRunningServices(Integer.MAX_VALUE)) {
+            if (MyForegroundService.class.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
 

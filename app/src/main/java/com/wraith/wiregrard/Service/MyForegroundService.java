@@ -14,6 +14,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
@@ -44,6 +45,18 @@ public class MyForegroundService extends Service {
     Tunnel tunnel;
     Config.Builder config;
 
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        config = new Config.Builder();
+        tunnel = new WgTunnel();
+        GoBackend.VpnService.prepare(this);
+        interfaceBuilder = new Interface.Builder();
+        peerBuilder = new Peer.Builder();
+        backend = new GoBackend(this);
+
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -59,15 +72,6 @@ public class MyForegroundService extends Service {
                 .setContentIntent(pendingIntent)
                 .build();
 
-       // concIONvpn();
-
-
-            config = new Config.Builder();
-        Tunnel tunnel = new WgTunnel();
-        GoBackend.VpnService.prepare(this);
-        Interface.Builder interfaceBuilder = new Interface.Builder();
-        Peer.Builder peerBuilder = new Peer.Builder();
-        Backend backend = new GoBackend(this);
 
         AsyncTask.execute(new Runnable() {
             @Override
@@ -95,33 +99,6 @@ public class MyForegroundService extends Service {
     }
 
 
-    void concIONvpn() {
-        config = new Config.Builder();
-        Tunnel tunnel = new WgTunnel();
-        GoBackend.VpnService.prepare(this);
-        Interface.Builder interfaceBuilder = new Interface.Builder();
-        Peer.Builder peerBuilder = new Peer.Builder();
-        Backend backend = new GoBackend(this);
-
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    backend.setState(tunnel, UP, config
-                            .setInterface(interfaceBuilder.addAddress(InetNetwork.parse("192.168.6.189/32"))
-                                    .parsePrivateKey("cApuxMnQiHHDiZLDLiIPx9/0RSo7wN/uCpd70cO4eX8=").build())
-                            .addPeer(peerBuilder.addAllowedIp(InetNetwork.parse("0.0.0.0/0"))
-                                    .setEndpoint(InetEndpoint.parse("ca2.vpnjantit.com:1024"))
-                                    .parsePublicKey("LZg89RAqejsZi6rhPIiSalWqDojKt08km4WIIlYh0zI=").build())
-                            .build());
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID,
@@ -136,10 +113,11 @@ public class MyForegroundService extends Service {
     @Override
     public void onDestroy() {
         try {
-            stopSelf();
             backend.setState(tunnel, DOWN, config.build());
+            stopSelf();
+
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            Log.e("vpnExecption", e.getMessage());
         }
         super.onDestroy();
     }

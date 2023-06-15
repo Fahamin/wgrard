@@ -1,20 +1,21 @@
 package com.wraith.wiregrard;
 
+import static com.wraith.wiregrard.utils.Fun.FreeServerList;
 import static com.wraith.wiregrard.utils.Fun.checkInternet;
+import static com.wraith.wiregrard.utils.Fun.foregroundServiceRunning;
 
-import androidx.annotation.Nullable;
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import android.app.ActivityManager;
+import android.app.Activity;
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
-import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -31,7 +32,6 @@ import com.wireguard.config.Interface;
 import com.wireguard.config.Peer;
 import com.wraith.wiregrard.Model.VpnModel;
 import com.wraith.wiregrard.Service.MyForegroundService;
-import com.wraith.wiregrard.Service.MyVpnService;
 import com.wraith.wiregrard.WirgurdUtils.WgTunnel;
 import com.wraith.wiregrard.reciver.MyBroadcastReceiver;
 import com.wraith.wiregrard.utils.Fun;
@@ -43,20 +43,9 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Thread b;
-    private ParcelFileDescriptor c;
-    private PendingIntent a;
-    private static int currentTunnelHandle = -1;
-    private Process process;
 
-    Interface.Builder interfaceBuilder;
-    Peer.Builder peerBuilder;
-    Backend backend;
-    Tunnel tunnel;
-    Config.Builder config;
 
-    //ui
-    MyBroadcastReceiver broadcastReceiver = new MyBroadcastReceiver();
+
     LinearLayout purchaseLayout;
     FrameLayout category, flAdplaceholder;
     TextView countryName, logTv, durationTv, byteInTv, byteOutTv;
@@ -68,18 +57,17 @@ public class MainActivity extends AppCompatActivity {
     int serverPos;
     TinyDB tinyDB;
 
+    List<VpnModel> list;
+    int pos = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        config = new Config.Builder();
-        Tunnel tunnel = new WgTunnel();
+        new Fun(this);
 
-        Interface.Builder interfaceBuilder = new Interface.Builder();
-        Peer.Builder peerBuilder = new Peer.Builder();
-        Backend backend = new GoBackend(this);
+        list = FreeServerList;
 
         initView();
 
@@ -101,9 +89,9 @@ public class MainActivity extends AppCompatActivity {
 
                         Intent intentPrepare = GoBackend.VpnService.prepare(MainActivity.this);
                         if (intentPrepare != null) {
-                            startActivityForResult(intentPrepare, 0);
+                            vpnServiceLauncher.launch(intentPrepare);
                         }
-                        startMyvpn();
+                        startVPN();
                     }
                 } else {
                     Toast.makeText(MainActivity.this, "Check Inter", Toast.LENGTH_SHORT).show();
@@ -111,8 +99,25 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+        currentConnectionLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                if (checkInternet()) {
+
+                    Intent mIntent = new Intent(MainActivity.this, HomeActivity.class);
+                    // someActivityResultLauncher.launch(mIntent);
+                    serverLauncher.launch(mIntent);
+
+                } else {
+//chck internet
+                }
+
+            }
+        });
 
     }
+
 
     private void initView() {
         tinyDB = new TinyDB(getApplicationContext());
@@ -137,54 +142,74 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public boolean foregroundServiceRunning() {
-        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : activityManager.getRunningServices(Integer.MAX_VALUE)) {
-            if (MyForegroundService.class.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     public void startMyvpn() {
+
+        if (checkInternet()) {
+            if (foregroundServiceRunning()) {
+                logTv.setText("Not Connected Server");
+                stopService(new Intent(MainActivity.this, MyForegroundService.class));
+
+            } else {
+
+                Intent intentPrepare = GoBackend.VpnService.prepare(MainActivity.this);
+                if (intentPrepare != null) {
+                    vpnServiceLauncher.launch(intentPrepare);
+                }
+                startVPN();
+            }
+        } else {
+            Toast.makeText(MainActivity.this, "Check Inter", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+
+    public void startVPN() {
         Intent serviceIntent = new Intent(this, MyForegroundService.class);
-        serviceIntent.putExtra("intentNetwork", "192.168.6.189/32");
-        serviceIntent.putExtra("countryName", "Canada Alabama");
-        serviceIntent.putExtra("privateKey", "cApuxMnQiHHDiZLDLiIPx9/0RSo7wN/uCpd70cO4eX8=");
-        serviceIntent.putExtra("endPoint", "ca2.vpnjantit.com:1024");
-        serviceIntent.putExtra("publicKey", "LZg89RAqejsZi6rhPIiSalWqDojKt08km4WIIlYh0zI=");
+        serviceIntent.putExtra("intentNetwork", list.get(pos).getIntentNetwork());
+        serviceIntent.putExtra("countryName", list.get(pos).getCountryName());
+        serviceIntent.putExtra("privateKey", list.get(pos).getPrivateKey());
+        serviceIntent.putExtra("endPoint", list.get(pos).getEndPoint());
+        serviceIntent.putExtra("publicKey", list.get(pos).getPublicKey());
         ContextCompat.startForegroundService(this, serviceIntent);
         logTv.setText("Connected Server");
-
+        countryName.setText(list.get(pos).getCountryName());
     }
 
-    public void offf() {
+    ActivityResultLauncher<Intent> serverLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        // There are no request codes
+                        Intent data = result.getData();
+                        assert data != null;
+                        pos = data.getIntExtra("server", 1);
+                        countryName.setText(list.get(pos).getCountryName());
+                        startMyvpn();
 
-        if (foregroundServiceRunning()) {
-            stopService(new Intent(this, MyVpnService.class));
-            stopService(new Intent(this, MyForegroundService.class));
-        }
-    }
+                    }
+                }
+            });
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == RESULT_OK) {
-            Intent serviceIntent = new Intent(this, MyForegroundService.class);
-            serviceIntent.putExtra("intentNetwork", "192.168.6.162/32");
-            serviceIntent.putExtra("countryName", "Canada Alabama");
-            serviceIntent.putExtra("privateKey", "cApuxMnQiHHDiZLDLiIPx9/0RSo7wN/uCpd70cO4eX8=");
-            serviceIntent.putExtra("endPoint", "ca2.vpnjantit.com:1024");
-            serviceIntent.putExtra("publicKey", "LZg89RAqejsZi6rhPIiSalWqDojKt08km4WIIlYh0zI=");
-            ContextCompat.startForegroundService(this, serviceIntent);
-            logTv.setText("Connected Server");
-            Log.e("vpnStart", "onActivityResult");
-        }
-    }
+    ActivityResultLauncher<Intent> vpnServiceLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        Intent serviceIntent = new Intent(MainActivity.this, MyForegroundService.class);
+                        serviceIntent.putExtra("intentNetwork", list.get(pos).getIntentNetwork());
+                        serviceIntent.putExtra("countryName", list.get(pos).getCountryName());
+                        serviceIntent.putExtra("privateKey", list.get(pos).getPrivateKey());
+                        serviceIntent.putExtra("endPoint", list.get(pos).getEndPoint());
+                        serviceIntent.putExtra("publicKey", list.get(pos).getPublicKey());
+                        ContextCompat.startForegroundService(MainActivity.this, serviceIntent);
+                        logTv.setText("Connected Server");
 
-    public void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-    }
-
+                    }
+                }
+            });
 }

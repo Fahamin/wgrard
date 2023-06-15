@@ -415,7 +415,7 @@
                             android:id="@+id/selectedServerIcon"
                             android:layout_width="30dp"
                             android:layout_height="30dp"
-                            android:src="@drawable/ic_japan" />
+                            android:src="@drawable/baseline_flag_circle_24" />
 
                     </LinearLayout>
 
@@ -428,7 +428,7 @@
                         android:layout_centerVertical="true"
                         android:layout_marginStart="62dp"
                         android:layout_marginLeft="30dp"
-                        android:text="Japan "
+                        android:text="Select Server "
                         android:textColor="@color/colorWhite"
                         android:textSize="18dp" />
 

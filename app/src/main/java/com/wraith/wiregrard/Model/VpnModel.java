@@ -5,12 +5,22 @@ public class VpnModel {
     String privateKey;
     String endPoint;
     String publicKey;
+    String countryName;
 
-    public VpnModel(String intentNetwork, String privateKey, String endPoint, String publicKey) {
+    public VpnModel(String intentNetwork, String privateKey, String endPoint, String publicKey, String countryName) {
         this.intentNetwork = intentNetwork;
         this.privateKey = privateKey;
         this.endPoint = endPoint;
         this.publicKey = publicKey;
+        this.countryName = countryName;
+    }
+
+    public String getCountryName() {
+        return countryName;
+    }
+
+    public void setCountryName(String countryName) {
+        this.countryName = countryName;
     }
 
     public String getIntentNetwork() {
